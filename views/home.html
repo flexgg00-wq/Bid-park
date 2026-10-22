@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BID PARK | Real-Time Auction Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-primary: #121212;
+            --bg-card: #1c1d21;
+            --bg-card-secondary: #24262c;
+            --bg-input: #2a2d34;
+            --accent-green: #4caf50;
+            --accent-green-hover: #388e3c;
+            --accent-blue: #2196f3;
+            --accent-blue-hover: #0b7dda;
+            --border-color: #333742;
+            --text-main: #f5f6f8;
+            --text-muted: #b0b4c0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            min-height: 100vh;
+            background: linear-gradient(rgba(10, 10, 12, 0.88), rgba(10, 10, 12, 0.88)), 
+                        url('https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1920&q=80') center/cover fixed no-repeat;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Navigation Bar & Multi-Section Click Dropdown */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 40px;
+            background: #141518;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            position: relative;
+            z-index: 100;
+        }
+
+        nav h1 { 
+            color: var(--accent-green); 
+            margin: 0; 
+            font-size: 1.6rem; 
+            font-weight: 800; 
+            letter-spacing: -0.5px; 
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-item {
+            position: relative;
+            margin-left: 24px;
+        }
+
+        .nav-links a, .dropdown-trigger {
+            color: var(--text-main);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: color 0.2s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            user-select: none;
+        }
+
+        .nav-links a:hover, .dropdown-trigger:hover { 
+            color: var(--accent-green); 
+        }
+
+        /* Dropdown Content Box */
+        .dropdown-menu {
+            display: none; /* Toggled on click via JavaScript */
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #1c1d21;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            min-width: 240px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            padding: 8px 0;
+            margin-top: 10px;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-menu a {
+            display: block;
+            padding: 12px 18px;
+            margin: 0;
+            font-size: 0.92rem;
+            font-weight: 500;
+            color: var(--text-main);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            text-decoration: none;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+
+        .dropdown-menu a:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-menu a:hover {
+            background: #24262c;
+            color: var(--accent-green);
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 4px 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 50px 20px;
+        }
+
+        /* Hero Banner */
+        .hero {
+            text-align: center;
+            padding: 55px 30px;
+            background: var(--bg-card);
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .hero h2 { 
+            font-size: 2.6rem; 
+            font-weight: 800; 
+            color: var(--accent-green); 
+            margin-top: 0; 
+            margin-bottom: 14px; 
+            letter-spacing: -0.5px;
+        }
+
+        .hero p { 
+            color: var(--text-muted); 
+            font-size: 1.15rem; 
+            font-weight: 400; 
+            max-width: 680px; 
+            margin: 0 auto; 
+            line-height: 1.7;
+        }
+
+        /* Portal Cards Grid */
+        .dashboards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .dash-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 35px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .dash-card:hover {
+            transform: translateY(-3px);
+            border-color: #4f5464;
+        }
+
+        .dash-card h3 { 
+            font-size: 1.6rem; 
+            font-weight: 700; 
+            margin-top: 0; 
+            margin-bottom: 12px; 
+        }
+
+        .dash-card.buyer h3 { color: var(--accent-blue); }
+        .dash-card.seller h3 { color: var(--accent-green); }
+        
+        .dash-card p { 
+            color: var(--text-muted); 
+            font-size: 1rem; 
+            margin-bottom: 28px; 
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 14px 28px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .btn-buyer { background: var(--accent-blue); color: #ffffff; }
+        .btn-buyer:hover { background: var(--accent-blue-hover); }
+        .btn-seller { background: var(--accent-green); color: #ffffff; }
+        .btn-seller:hover { background: var(--accent-green-hover); }
+
+        /* General Content Sections */
+        section {
+            background: var(--bg-card);
+            border-radius: 14px;
+            padding: 40px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        section h2 {
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 14px;
+            margin-top: 0;
+            margin-bottom: 24px;
+            color: var(--accent-green);
+            font-size: 1.7rem;
+            font-weight: 700;
+        }
+
+        /* FAQ Styling */
+        .faq-item {
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+        }
+
+        .faq-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .faq-question {
+            font-weight: 700;
+            color: #ffffff;
+            font-size: 1.05rem;
+            margin-bottom: 6px;
+        }
+
+        .faq-answer {
+            color: var(--text-muted);
+            font-size: 0.98rem;
+        }
+
+        /* Contacts Grid */
+        .contact-intro {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            margin-bottom: 24px;
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .contact-box {
+            background: var(--bg-card-secondary);
+            padding: 24px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .contact-box h4 { 
+            margin: 0 0 8px 0; 
+            color: var(--accent-blue); 
+            font-size: 1.1rem; 
+        }
+
+        .contact-box p {
+            margin: 0;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        footer {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-color);
+            background: #141518;
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <h1>🔨 BID PARK</h1>
+        <div class="nav-links">
+            <!-- Click Dropdown Menu containing Portals, FAQ & Contact -->
+            <div class="nav-item">
+                <span class="dropdown-trigger" id="dashDropdownBtn">Dashboards ▾</span>
+                <div class="dropdown-menu" id="dashDropdownMenu">
+                    <a href="/marketplace">🛒 Buyer Marketplace</a>
+                    <a href="/seller">🏷️ Seller Portal</a>
+                    <div class="dropdown-divider"></div>
+                    <a href="#faq">❓ Frequently Asked Questions</a>
+                    <a href="#contact">📞 Contact & Support</a>
+                </div>
+            </div>
+            
+            <div class="nav-item">
+                <a href="/login" style="color: var(--accent-blue);">Login / Register</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <!-- Welcome Hero Banner -->
+        <div class="hero">
+            <h2>Welcome to BID PARK</h2>
+            <p>The premier real-time auction marketplace. Place instant live bids on listed items or publish your inventory with direct image uploads.</p>
+        </div>
+
+        <!-- Dashboard Selection Portal Cards -->
+        <div id="dashboards" class="dashboards">
+            <div class="dash-card buyer">
+                <div>
+                    <h3>🛒 Buyer Portal</h3>
+                    <p>Browse active listings freely, view real-time price updates, and log in when ready to place your winning bid.</p>
+                </div>
+                <a href="/marketplace" class="btn btn-buyer">Enter Buyer Marketplace</a>
+            </div>
+
+            <div class="dash-card seller">
+                <div>
+                    <h3>🏷️ Seller Portal</h3>
+                    <p>Log in or create an account to post new auction items, set starting prices, and upload product photos directly.</p>
+                </div>
+                <a href="/seller" class="btn btn-seller">Go to Seller Dashboard</a>
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <section id="faq">
+            <h2>Frequently Asked Questions (FAQ)</h2>
+
+            <div class="faq-item">
+                <div class="faq-question">1. How do real-time bids work?</div>
+                <div class="faq-answer">Bids update instantaneously using Socket.io WebSockets. Every new high bid is broadcast live to all active buyers on the marketplace without needing to refresh the page.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">2. How do I list an item as a seller?</div>
+                <div class="faq-answer">Access the Seller Portal, log in or sign up, specify the item title and starting price, upload an image file directly from your device, and post it immediately to the marketplace.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">3. What happens when an auction closes?</div>
+                <div class="faq-answer">When an administrator closes an auction, the winning bidder receives an automated notification email containing payment verification details and checkout links.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">4. Do I need an account to view items?</div>
+                <div class="faq-answer">No, anyone can explore and view active auction listings on the marketplace. An account is only required when you choose to place a bid or post an item as a seller.</div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact">
+            <h2>Contact & Support</h2>
+            <p class="contact-intro">Need assistance with your BID PARK account, listings, or bids? Reach out to our dedicated support team:</p>
+            
+            <div class="contact-grid">
+                <div class="contact-box">
+                    <h4>📧 Email Support</h4>
+                    <p>support@bidpark.com</p>
+                </div>
+                <div class="contact-box">
+                    <h4>📞 Support Line</h4>
+                    <p>+254 700 000 000</p>
+                </div>
+                <div class="contact-box">
+                    <h4>📍 Main Location</h4>
+                    <p>Nairobi, Kenya</p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <footer>
+        &copy; 2026 BID PARK. All rights reserved.
+    </footer>
+
+    <script>
+        const dropdownBtn = document.getElementById('dashDropdownBtn');
+        const dropdownMenu = document.getElementById('dashDropdownMenu');
+
+        // Toggle dropdown on click
+        dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdownMenu.classList.toggle('show');
+        });
+
+        // Close dropdown when clicking links inside it
+        dropdownMenu.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                dropdownMenu.classList.remove('show');
+            });
+        });
+
+        // Close dropdown when clicking anywhere outside
+        document.addEventListener('click', () => {
+            if (dropdownMenu.classList.contains('show')) {
+                dropdownMenu.classList.remove('show');
+            }
+        });
+    </script>
+
+</body>
+</html>

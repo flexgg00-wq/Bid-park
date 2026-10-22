@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BID PARK | Marketplace</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #121212; color: #ffffff; margin: 0; padding: 20px; }
+        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #333; }
+        header h1 { color: #4caf50; margin: 0; font-size: 1.5rem; }
+        .user-status { color: #aaa; font-size: 0.85rem; }
+
+        /* Reduced Grid Gap & Compact Card Dimensions */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; margin-top: 15px; }
+        .card { background: #1e1e1e; border-radius: 8px; padding: 12px; border: 1px solid #333; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        /* Reduced Image Height (from 180px to 130px) */
+        .card img { width: 100%; height: 130px; object-fit: cover; border-radius: 5px; }
+        .card h3 { margin: 8px 0 4px 0; font-size: 1.05rem; }
+
+        /* Compact Description Box */
+        .description-box { 
+            background: #262626; 
+            padding: 6px 8px; 
+            border-radius: 4px; 
+            margin: 6px 0; 
+            font-size: 0.8rem; 
+            color: #ccc; 
+            line-height: 1.3;
+            border-left: 3px solid #2196f3;
+            max-height: 48px;
+            overflow-y: auto;
+        }
+
+        .price { color: #4caf50; font-weight: bold; font-size: 1rem; margin: 4px 0; }
+        .bidder { color: #ccc; font-size: 0.82rem; margin-bottom: 2px; }
+        .timestamp { color: #888; font-size: 0.75rem; margin-top: 2px; }
+        
+        /* Compact Status Badges */
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin: 4px 0; }
+        .status-active { background: rgba(76, 175, 80, 0.2); color: #4caf50; border: 1px solid #4caf50; }
+        .status-completed { background: rgba(244, 67, 54, 0.2); color: #f44336; border: 1px solid #f44336; }
+
+        /* Compact Controls */
+        input[type="number"] { width: 100%; padding: 7px; margin-top: 6px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem; }
+        button { width: 100%; padding: 8px; margin-top: 6px; background: #2196f3; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+        button:hover { background: #0b7dda; }
+        button:disabled { background: #444; cursor: not-allowed; color: #aaa; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🔨 BID PARK Marketplace</h1>
+        <div>
+            <span class="user-status" id="userDisplay">Guest Viewer</span> | 
+            <a href="/" style="color:#aaa; text-decoration:none;">Home</a> | 
+            <a href="/seller" style="color:#4caf50; text-decoration:none;">Seller Portal</a> | 
+            <a href="/login" id="authBtn" style="color:#2196f3; text-decoration:none;">Login / Register</a>
+        </div>
+    </header>
+
+    <div class="grid" id="auctionGrid"></div>
+
+    <script>
+        const socket = io();
+        let currentUser = null;
+
+        function getAccurateProductImage(itemName, currentImageUrl, itemId) {
+            const name = itemName.toLowerCase();
+
+            if (currentImageUrl && currentImageUrl.startsWith('/uploads/')) {
+                return currentImageUrl;
+            }
+
+            if (name.includes('iphone 11')) {
+                return 'https://images.unsplash.com/photo-1574944985070-8f3ebc6b79d2?auto=format&fit=crop&w=600&q=80';
+            }
+            if (name.includes('iphone 13') || name.includes('iphone 14') || name.includes('iphone 15')) {
+                return 'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?auto=format&fit=crop&w=600&q=80';
+            }
+            if (name.includes('hp') || name.includes('elitebook') || name.includes('laptop')) {
+                return 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=600&q=80';
+            }
+            if (name.includes('macbook')) {
+                return 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80';
+            }
+            if (name.includes('bmw') || name.includes('m3') || name.includes('g81')) {
+                return 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=600&q=80';
+            }
+            if (name.includes('ps5') || name.includes('playstation')) {
+                return 'https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&w=600&q=80';
+            }
+
+            return `https://picsum.photos/seed/${itemId}/300/200`;
+        }
+
+        window.onload = function() {
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                currentUser = JSON.parse(storedUser);
+                document.getElementById('userDisplay').textContent = `Logged in: ${currentUser.name}`;
+                document.getElementById('authBtn').textContent = 'Account';
+            }
+        };
+
+        socket.emit('getItems');
+
+        socket.on('initItems', (items) => {
+            const grid = document.getElementById('auctionGrid');
+            grid.innerHTML = '';
+
+            if (items.length === 0) {
+                grid.innerHTML = '<p>No items listed on BID PARK yet.</p>';
+                return;
+            }
+
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+
+                const accurateImage = getAccurateProductImage(item.name, item.image, item._id);
+
+                const startDate = item.createdAt 
+                    ? new Date(item.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) 
+                    : 'Just now';
+
+                const isCompleted = item.status === 'completed' || item.status === 'closed';
+                
+                const endDate = item.endedAt 
+                    ? new Date(item.endedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) 
+                    : 'In Progress';
+
+                card.innerHTML = `
+                    <div>
+                        <img src="${accurateImage}" 
+                             alt="${item.name}" 
+                             onerror="this.onerror=null; this.src='https://picsum.photos/seed/${item._id}/300/200';">
+                        <h3>${item.name}</h3>
+                        <div>
+                            <span class="badge ${isCompleted ? 'status-completed' : 'status-active'}">
+                                ${isCompleted ? '● Completed' : '● Live'}
+                            </span>
+                        </div>
+
+                        <div class="description-box">
+                            ${item.description || 'No description provided.'}
+                        </div>
+
+                        <p class="price">KES ${item.currentPrice.toLocaleString()}</p>
+                        <p class="bidder">${isCompleted ? 'Winner' : 'High Bid'}: <strong>${item.highestBidder}</strong></p>
+                        <div class="timestamp">⏱️ <strong>Start:</strong> ${startDate}</div>
+                        ${isCompleted ? `<div class="timestamp">🏁 <strong>End:</strong> ${endDate}</div>` : ''}
+                    </div>
+
+                    <div style="margin-top: 8px;">
+                        ${!isCompleted ? `
+                            <input type="number" id="bid-${item._id}" placeholder="Min: KES ${item.currentPrice + 1}">
+                            <button onclick="submitBid('${item._id}', '${item.name}',${item.currentPrice})">Place Bid</button>
+                        ` : '<button disabled>Auction Closed</button>'}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        });
+
+        socket.on('bidUpdated', () => socket.emit('getItems'));
+
+        function submitBid(itemId, itemName, currentPrice) {
+            const storedUser = localStorage.getItem('user');
+
+            if (!storedUser) {
+                alert('You must log in or create an account to place a bid on BID PARK.');
+                window.location.href = '/login';
+                return;
+            }
+
+            const user = JSON.parse(storedUser);
+            const bidInput = document.getElementById(`bid-${itemId}`);
+            const bidAmount = parseInt(bidInput.value);
+
+            if (!bidAmount || bidAmount <= currentPrice) {
+                alert(`Your bid must be higher than KES ${currentPrice}`);
+                return;
+            }
+
+            socket.emit('placeBid', {
+                itemId: itemId,
+                amount: bidAmount,
+                userName: user.name,
+                userEmail: user.email,
+                itemName: itemName
+            });
+
+            bidInput.value = '';
+        }
+    </script>
+</body>
+</html>

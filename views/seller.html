@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BID PARK | Seller Portal</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #121212; color: #ffffff; margin: 0; padding: 20px; }
+        .container { max-width: 500px; margin: 40px auto; background: #1e1e1e; padding: 30px; border-radius: 10px; border: 1px solid #333; }
+        h2 { text-align: center; color: #4caf50; margin-top: 0; }
+        .user-badge { text-align: center; background: #2a2a2a; padding: 8px; border-radius: 6px; margin-bottom: 20px; font-size: 0.9rem; color: #aaa; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #ccc; }
+        input, textarea { width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 5px; box-sizing: border-box; font-family: Arial, sans-serif; }
+        button { width: 100%; padding: 12px; background: #4caf50; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #388e3c; }
+        .nav-links { display: flex; justify-content: space-between; margin-top: 15px; }
+        .nav-links a { color: #2196f3; text-decoration: none; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>🏷️ BID PARK Seller Portal</h2>
+        <div class="user-badge" id="userBadge">Verifying seller authentication...</div>
+        
+        <div class="form-group">
+            <label for="itemName">Item Title</label>
+            <input type="text" id="itemName" placeholder="e.g., Gaming Laptop RTX 4060">
+        </div>
+
+        <div class="form-group">
+            <label for="itemDescription">Item Description</label>
+            <textarea id="itemDescription" rows="3" placeholder="Provide product details, condition, specs, warranty..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="startingPrice">Starting Price (KES)</label>
+            <input type="number" id="startingPrice" placeholder="e.g., 50000">
+        </div>
+
+        <div class="form-group">
+            <label for="imageFile">Item Image (Upload File)</label>
+            <input type="file" id="imageFile" accept="image/*">
+        </div>
+
+        <button onclick="submitItem()">Post Item to Marketplace</button>
+        
+        <div class="nav-links">
+            <a href="/">← Home</a>
+            <a href="/marketplace">Marketplace →</a>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let currentUser = null;
+
+        window.onload = function() {
+            const storedUser = localStorage.getItem('user');
+            if (!storedUser) {
+                alert('Sellers must log in or create an account before listing items on BID PARK.');
+                window.location.href = '/login?action=register';
+                return;
+            }
+
+            currentUser = JSON.parse(storedUser);
+            document.getElementById('userBadge').innerHTML = `Logged in as: <strong>${currentUser.name}</strong> (${currentUser.email})`;
+        };
+
+        async function submitItem() {
+            if (!currentUser) {
+                alert('Please log in or sign up as a seller first.');
+                window.location.href = '/login';
+                return;
+            }
+
+            const name = document.getElementById('itemName').value.trim();
+            const description = document.getElementById('itemDescription').value.trim();
+            const startingPrice = document.getElementById('startingPrice').value.trim();
+            const fileInput = document.getElementById('imageFile');
+
+            if (!name || !startingPrice) {
+                alert('Please provide an item name and starting price.');
+                return;
+            }
+
+            const randomSeed = encodeURIComponent(name.replace(/\s+/g, '-') + '-' + Date.now());
+            let finalImageUrl = `https://picsum.photos/seed/${randomSeed}/300/200`;
+
+            if (fileInput.files.length > 0) {
+                const formData = new FormData();
+                formData.append('itemImage', fileInput.files[0]);
+
+                try {
+                    const response = await fetch('/api/upload-image', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        finalImageUrl = data.imageUrl;
+                    }
+                } catch (err) {
+                    console.error('File upload error:', err);
+                }
+            }
+
+            socket.emit('submitItem', {
+                name: name,
+                description: description,
+                startingPrice: startingPrice,
+                image: finalImageUrl,
+                sellerEmail: currentUser.email
+            });
+
+            alert('Auction item listed successfully on BID PARK!');
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemDescription').value = '';
+            document.getElementById('startingPrice').value = '';
+            document.getElementById('imageFile').value = '';
+        }
+    </script>
+</body>
+</html>

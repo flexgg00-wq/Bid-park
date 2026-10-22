@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Auction System | Account Access</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #121212; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: #1e1e1e; padding: 30px; border-radius: 8px; width: 350px; border: 1px solid #333; }
+        input, select { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #444; background: #2a2a2a; color: white; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #2196f3; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #0b7dda; }
+        .links { text-align: center; margin-top: 15px; font-size: 0.85rem; color: #aaa; }
+        .link-btn { color: #2196f3; cursor: pointer; text-decoration: underline; margin: 0 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="card" id="loginForm">
+        <h2>Account Login</h2>
+        <input type="email" id="loginEmail" placeholder="Email Address">
+        <input type="password" id="loginPassword" placeholder="Password">
+        <button onclick="login()">Log In</button>
+        <div class="links">
+            <span class="link-btn" onclick="showForm('registerForm')">Create Account</span> | 
+            <span class="link-btn" onclick="showForm('passwordForm')">Change Password</span>
+        </div>
+    </div>
+
+    <div class="card" id="registerForm" style="display:none;">
+        <h2>Create Account</h2>
+        <input type="text" id="regName" placeholder="Full Name">
+        <input type="email" id="regEmail" placeholder="Email Address">
+        <input type="password" id="regPassword" placeholder="Password">
+        <select id="regRole" onchange="toggleAdminKey(this.value)">
+            <option value="customer">Customer / Bidder</option>
+            <option value="seller">Seller</option>
+            <option value="admin">Administrator</option>
+        </select>
+        <input type="password" id="adminCode" placeholder="Enter Admin Secret Passcode" style="display:none;">
+        <button onclick="register()">Sign Up</button>
+        <div class="links">
+            Already have an account? <span class="link-btn" onclick="showForm('loginForm')">Log In</span>
+        </div>
+    </div>
+
+    <div class="card" id="passwordForm" style="display:none;">
+        <h2>Change Password</h2>
+        <input type="email" id="resetEmail" placeholder="Email Address">
+        <input type="password" id="currentPassword" placeholder="Current Password">
+        <input type="password" id="newPassword" placeholder="New Password">
+        <button onclick="changePassword()">Update Password</button>
+        <div class="links">
+            <span class="link-btn" onclick="showForm('loginForm')">Back to Login</span>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            if (new URLSearchParams(window.location.search).get('action') === 'register') {
+                showForm('registerForm');
+            }
+        };
+
+        function showForm(formId) {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('passwordForm').style.display = 'none';
+            document.getElementById(formId).style.display = 'block';
+        }
+
+        function toggleAdminKey(role) {
+            document.getElementById('adminCode').style.display = (role === 'admin') ? 'block' : 'none';
+        }
+
+        async function register() {
+            const name = document.getElementById('regName').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const role = document.getElementById('regRole').value;
+            const adminCode = document.getElementById('adminCode').value;
+
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password, role, adminCode })
+            });
+            const data = await res.json();
+            alert(data.message || data.error);
+            if (data.success) showForm('loginForm');
+        }
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            if (data.success) {
+                localStorage.setItem('user', JSON.stringify(data.user));
+                alert(`Welcome ${data.user.name}!`);
+                if (data.user.role === 'admin') window.location.href = '/admin';
+                else if (data.user.role === 'seller') window.location.href = '/seller';
+                else window.location.href = '/marketplace';
+            } else {
+                alert(data.error);
+            }
+        }
+
+        async function changePassword() {
+            const email = document.getElementById('resetEmail').value.trim();
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+
+            const res = await fetch('/api/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, currentPassword, newPassword })
+            });
+            const data = await res.json();
+            alert(data.message || data.error);
+            if (data.success) showForm('loginForm');
+        }
+    </script>
+</body>
+</html>

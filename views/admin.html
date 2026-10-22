@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 30px; background: #f0f2f5; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background: #1a1a1a; color: white; }
+        .btn-cancel { background: #ff9800; color: white; border: none; padding: 6px 10px; cursor: pointer; border-radius: 4px; margin-right: 5px; }
+        .btn-close { background: #d32f2f; color: white; border: none; padding: 6px 10px; cursor: pointer; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Admin Auction Management</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Item Name</th>
+                <th>Current Price</th>
+                <th>Highest Bidder</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="admin-table"></tbody>
+    </table>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        socket.emit('getItems');
+
+        socket.on('initItems', (items) => {
+            const tbody = document.getElementById('admin-table');
+            tbody.innerHTML = items.map(item => `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>KES ${item.currentPrice ? item.currentPrice.toLocaleString() : '0'}</td>
+                    <td>${item.highestBidder} (${item.highestBidderEmail})</td>
+                    <td>${item.status}</td>
+                    <td>
+                        ${item.status === 'active' ? `
+                            <button class="btn-cancel" onclick="cancelBid('${item._id}')">Cancel Bid</button>
+                            <button class="btn-close" onclick="closeAuction('${item._id}')">End Auction</button>
+                        ` : 'Closed'}
+                    </td>
+                </tr>
+            `).join('');
+        });
+
+        function cancelBid(id) {
+            const reason = prompt("Enter reason for bid cancellation:");
+            if (reason) socket.emit('cancelBid', { itemId: id, reason });
+        }
+
+        function closeAuction(id) {
+            if (confirm("End auction and email payment link to winner?")) {
+                socket.emit('closeAuction', { itemId: id });
+            }
+        }
+    </script>
+</body>
+</html>
