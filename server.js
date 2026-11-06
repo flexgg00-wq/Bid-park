@@ -120,7 +120,7 @@ async function startServer() {
             }).catch(err => console.log('Welcome email dispatch skipped/failed:', err.message));
 
             res.json({ success: true, message: 'Account created successfully!' });
-        });     
+        });    
 
         // User Login
         app.post('/api/login', async (req, res) => {
@@ -188,7 +188,7 @@ async function startServer() {
                 io.emit('bidUpdated', { itemId, amount, userName });
             });
 
-            // Admin: Close Auction (With Verbose Email Diagnostics)
+            // Admin: Close Auction (Dispatches emails to BOTH Winner and Seller)
             socket.on('closeAuction', async (data) => {
                 const { itemId } = data;
                 try {
@@ -202,14 +202,13 @@ async function startServer() {
                         { $set: { status: 'completed', endedAt: endedAt } }
                     );
 
-                    // Verify winner email exists and attempt dispatch
-                    if (item.highestBidderEmail && item.highestBidderEmail !== 'None') {
-                        console.log(`📧 Dispatching auction winner email to: ${item.highestBidderEmail}`);
+                    const emailPromises = [];
 
-                        const paymentLink = `${process.env.PAYMENT_GATEWAY_URL}?item=${item._id}&amount=${item.currentPrice}`;
-                        
-                        try {
-                            const mailInfo = await transporter.sendMail({
+                    // 1. Email to Winning Bidder
+                    if (item.highestBidderEmail && item.highestBidderEmail !== 'None') {
+                        const paymentLink = `${process.env.PAYMENT_GATEWAY_URL || '#'}?item=${item._id}&amount=${item.currentPrice}`;
+                        emailPromises.push(
+                            transporter.sendMail({
                                 from: `"BID PARK" <${process.env.EMAIL_USER}>`,
                                 to: item.highestBidderEmail,
                                 subject: `Congratulations! You Won the Auction on BID PARK: ${item.name}`,
@@ -222,13 +221,36 @@ async function startServer() {
                                         <a href="${paymentLink}" style="display: inline-block; padding: 12px 20px; background: #2196f3; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">Complete Checkout</a>
                                     </div>
                                 `
-                            });
-                            console.log(`✅ Email sent successfully! Message ID: ${mailInfo.messageId}`);
-                        } catch (emailErr) {
-                            console.error(`❌ Nodemailer Dispatch Failed: ${emailErr.message}`);
-                        }
+                            })
+                        );
+                    }
+
+                    // 2. Email to Seller
+                    if (item.sellerEmail && item.sellerEmail !== 'None') {
+                        emailPromises.push(
+                            transporter.sendMail({
+                                from: `"BID PARK" <${process.env.EMAIL_USER}>`,
+                                to: item.sellerEmail,
+                                subject: `Auction Completed: Your item "${item.name}" has been sold!`,
+                                html: `
+                                    <div style="font-family: Arial, sans-serif; background: #121212; color: #ffffff; padding: 20px; border-radius: 8px;">
+                                        <h2 style="color: #ff9800;">📦 Auction Completed Successfully!</h2>
+                                        <p>Your listed item <strong>${item.name}</strong> has been sold.</p>
+                                        <p><strong>Winning Bid:</strong> KES ${item.currentPrice.toLocaleString()}</p>
+                                        <p><strong>Winning Bidder:</strong> ${item.highestBidder} (${item.highestBidderEmail})</p>
+                                        <p>Please check your BID PARK dashboard to coordinate fulfillment.</p>
+                                    </div>
+                                `
+                            })
+                        );
+                    }
+
+                    // Dispatch all emails concurrently
+                    if (emailPromises.length > 0) {
+                        await Promise.all(emailPromises);
+                        console.log(`✅ Auction completion emails successfully sent for item: ${item.name}`);
                     } else {
-                        console.log(`⚠️ Email skipped: Highest bidder email address is 'None'.`);
+                        console.log(`⚠️ Email skipped: No valid bidder or seller email found for item: ${item.name}`);
                     }
 
                     const updatedItems = await db.collection('auctions').find().toArray();
@@ -240,7 +262,7 @@ async function startServer() {
             });
         });
 
-        const PORT = process.env.PORT || 3000;
+        const PORT = process.env.PORT || 10000;
         server.listen(PORT, () => console.log(`🚀 BID PARK System Live at http://localhost:${PORT}`));
 
     } catch (err) {
